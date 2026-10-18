@@ -27,8 +27,11 @@ data class SimLine(
     val networkType: String = "—",
     val radio: RadioMetrics? = null,
 ) {
-    val title: String get() = displayName.ifBlank { carrierName.ifBlank { "SIM ${slotIndex + 1}" } }
-    val subtitle: String get() = "SIM ${slotIndex + 1} · ${carrierName.ifBlank { "回線" }}"
+    val title: String
+        get() = displayName.ifBlank { carrierName.ifBlank { "SIM ${slotIndex + 1}" } }
+
+    val subtitle: String
+        get() = "SIM ${slotIndex + 1} · ${carrierName.ifBlank { "回線" }}"
 }
 
 data class RadioMetrics(
@@ -59,35 +62,37 @@ data class RadioMetrics(
         get() = secondaryCellCount > 0 || aggregatedBands.isNotEmpty()
 
     val bandLabel: String?
-        get() = bandNumber?.let { number ->
-            val prefix = if (technology.startsWith("5G")) "n" else "B"
-            "$prefix$number"
-        } ?: bandName
+        get() =
+            bandNumber?.let { number ->
+                val prefix = if (technology.startsWith("5G")) "n" else "B"
+                "$prefix$number"
+            } ?: bandName
 
-    fun logValue(): Map<String, Any?> = mapOf(
-        "technology" to technology,
-        "primaryConnected" to primaryConnected,
-        "servingCellCount" to servingCellCount,
-        "neighboringCellCount" to neighboringCellCount,
-        "secondaryCellCount" to secondaryCellCount,
-        "bandNumber" to bandNumber,
-        "bandName" to bandName,
-        "channelNumber" to channelNumber,
-        "aggregatedBands" to aggregatedBands,
-        "bandwidthKhz" to bandwidthKhz,
-        "referenceDbm" to referenceDbm,
-        "rssiDbm" to rssiDbm,
-        "rsrpDbm" to rsrpDbm,
-        "rsrqDb" to rsrqDb,
-        "sinrDb" to sinrDb,
-        "cqi" to cqi,
-        "timingAdvance" to timingAdvance,
-        "pci" to pci,
-        "areaCode" to areaCode,
-        "cellId" to cellId,
-        "observedAtElapsed" to observedAtElapsed,
-        "cells" to cells.map(RadioCellObservation::logValue),
-    )
+    fun logValue(): Map<String, Any?> =
+        mapOf(
+            "technology" to technology,
+            "primaryConnected" to primaryConnected,
+            "servingCellCount" to servingCellCount,
+            "neighboringCellCount" to neighboringCellCount,
+            "secondaryCellCount" to secondaryCellCount,
+            "bandNumber" to bandNumber,
+            "bandName" to bandName,
+            "channelNumber" to channelNumber,
+            "aggregatedBands" to aggregatedBands,
+            "bandwidthKhz" to bandwidthKhz,
+            "referenceDbm" to referenceDbm,
+            "rssiDbm" to rssiDbm,
+            "rsrpDbm" to rsrpDbm,
+            "rsrqDb" to rsrqDb,
+            "sinrDb" to sinrDb,
+            "cqi" to cqi,
+            "timingAdvance" to timingAdvance,
+            "pci" to pci,
+            "areaCode" to areaCode,
+            "cellId" to cellId,
+            "observedAtElapsed" to observedAtElapsed,
+            "cells" to cells.map(RadioCellObservation::logValue),
+        )
 }
 
 data class RadioCellObservation(
@@ -106,16 +111,17 @@ data class RadioCellObservation(
             band.firstOrNull { it.key == "band" }?.value?.let { append(" · ").append(it) }
         }
 
-    fun logValue(): Map<String, Any?> = mapOf(
-        "technology" to technology,
-        "connection" to connection,
-        "connectionInferred" to connectionInferred,
-        "network" to network.associate { it.key to it.value },
-        "band" to band.associate { it.key to it.value },
-        "identity" to identity.associate { it.key to it.value },
-        "signal" to signal.associate { it.key to it.value },
-        "sourceTimestamp" to sourceTimestamp,
-    )
+    fun logValue(): Map<String, Any?> =
+        mapOf(
+            "technology" to technology,
+            "connection" to connection,
+            "connectionInferred" to connectionInferred,
+            "network" to network.associate { it.key to it.value },
+            "band" to band.associate { it.key to it.value },
+            "identity" to identity.associate { it.key to it.value },
+            "signal" to signal.associate { it.key to it.value },
+            "sourceTimestamp" to sourceTimestamp,
+        )
 }
 
 data class RadioField(

@@ -52,9 +52,15 @@ SIM切替はShizuku UserService（UID 2000）から `ISub` を呼びます。SM-
 ## ビルド
 
 ```bash
+./gradlew spotlessApply
+./gradlew spotlessCheck
 ./gradlew testDebugUnitTest assembleDebug
 ./gradlew assembleRelease
 ```
+
+KotlinとGradle Kotlin DSLはSpotless + ktfmtで統一整形します。`preBuild`は
+`spotlessCheck`とライセンス台帳検証を必ず実行するため、未整形のコードや必要な
+ライセンスファイルの欠落を含むAPKは生成しません。
 
 デバッグ用APKは `app/build/outputs/apk/debug/app-debug.apk` に生成されます。未難読化かつ
 `run-as`可能で、スタックトレースと端末内ログの調査を優先します。
@@ -71,7 +77,7 @@ GitHub配布用APKは `app/build/outputs/apk/release/app-release.apk` に生成�
 4. 「データSIMを自動切替」をONにします。
 5. 安定運用のため、端末設定でSIM Pilotをバッテリー最適化の対象外にします。
 
-監視またはWi-Fi復帰が有効なら、端末再起動後は画面を開かずに監視サービスを自動起動します。設定はDirect Boot領域に保存されるため、ロック解除前の起動イベントでも復帰できます。ロック解除前は通常Shizukuが未起動なので切替を行わず、「Shizukuの起動待ち」としてログへ記録します。端末のロックが外れるたびに強制チェックを1回予約し、モバイル接続中なら速度も測定します。Shizukuが後から復帰した場合も同様に即時再評価し、同時に届く解除通知による二重測定は抑制します。
+監視またはWi-Fi復帰が有効なら、端末再起動後は画面を開かずに監視サービスを自動起動します。設定はDirect Boot領域に保存されるため、ロック解除前の起動イベントでも復帰できます。ロック解除前は通常Shizukuが未起動なので切替を行わず、「Shizukuの起動待ち」としてログへ記録します。画面復帰直後は電波と小さな疎通確認を先に行い、1秒後に速度を含む詳細測定を強制します。これにより最初の結果を速度測定で待たせず、弱い回線は続けて詳しく比較します。Shizukuが後から復帰した場合も同様に即時再評価し、同時に届く解除通知による二重測定は抑制します。
 
 Android 13以降では通知権限を宣言・要求しないため、監視通知は通知ドロワーへ表示されません。Foreground Service自体はAndroidの要件として維持され、システムの「実行中のアプリ」管理画面には表示されます。Android 12ではOS仕様上Foreground Service通知を完全には隠せません。
 
@@ -79,7 +85,9 @@ Android 13以降では通知権限を宣言・要求しないため、監視通�
 
 ## 診断ログ
 
-現在ログは最大8MBのJSON Lines、過去ログは最大16世代のgzip圧縮JSON Linesとして、Direct Boot対応のアプリ専用領域に保存します。各NetMonster観測でPrimary / Secondary / Neighbor全セルの全取得値を間引かず記録し、無線ページ表示中の5秒観測も保存します。電話番号、ICCID、IMSI、IMEIは記録しません。各監視周期には通信経路、SIM名／ID、dBm、RSRP/RSRQ/SINR、CQI、帯域幅、CA、セル識別情報、無線評価、品質スコアと内訳、両SIMの比較値、残容量、判定、切替しなかった理由、Shizuku状態を含みます。SIM Pilotが要求した変更は `app/ui_manual`、`app/auto_failover`、`app/comparison_probe`、`app/comparison_revert`、`app/wifi_restore`、それ以外の変更は `external_user_or_system` と記録します。
+現在ログは最大8MBのJSON Lines、過去ログは最大16世代のgzip圧縮JSON Linesとして、Direct Boot対応のアプリ専用領域に保存します。複数プロセスからの書き込みとローテーションはファイルロックで直列化し、旧版で生じたNUL領域は初回起動時にJSON行を保ったまま自動修復します。状態が変わらないWi-Fi待機判定は10分ごとの要約、同種のリアルタイム通知は30秒ごとの要約にして、品質・比較・切替ログを埋もれにくくしています。
+
+各NetMonster観測でPrimary / Secondary / Neighbor全セルの全取得値を間引かず記録し、無線ページ表示中の5秒観測も保存します。電話番号、ICCID、IMSI、IMEIは記録しません。各監視周期には通信経路、SIM名／ID、dBm、RSRP/RSRQ/SINR、CQI、帯域幅、CA、セル識別情報、無線評価、品質スコアと内訳、両SIMの比較値、残容量、判定、切替しなかった理由、Shizuku状態を含みます。SIM Pilotが要求した変更は `app/ui_manual`、`app/auto_failover`、`app/comparison_probe`、`app/comparison_revert`、`app/wifi_restore`、それ以外の変更は `external_user_or_system` と記録します。
 
 接続中の端末からログと現在のシステム状態をまとめて取得できます。デバッグ版は`run-as`、
 GitHub配布用の非デバッグrelease版は`android.permission.DUMP`でshellだけに公開した読み取り専用
@@ -111,7 +119,7 @@ adb -s 192.168.3.13:5555 exec-out content read \
 
 ## 判定と通信量
 
-通常は小さな204応答だけを確認し、定期確認・弱電波・RSRQ/SINR悪化・遅延悪化時に64KBをダウンロードして実効速度を測ります。電波、電波品質、遅延、速度を0〜100の悪化スコアへ合算し、既定値では45以上を低品質、20以上を品質低下として扱います。目標速度、弱電波dBm、連続回数、監視間隔、クールダウンは「設定 → 通信品質」で調整できます。NetMonster情報を取得できない端末やタイミングでは、従来のAndroid公開API値だけで判定を継続します。
+通常は小さな204応答だけを確認し、定期確認・弱電波・RSRQ/SINR悪化・遅延悪化時に64KBをダウンロードして実効速度を測ります。電波、電波品質、遅延、速度を0〜100の悪化スコアへ合算し、既定値では45以上を低品質、20以上を品質低下として扱います。候補回線が低品質のままなら、電波と瞬間速度だけが良くても採用しません。ただし現在回線が疎通不能、または候補の総合スコアが12点以上改善する場合は復旧を優先します。目標速度、弱電波dBm、連続回数、監視間隔、クールダウンは「設定 → 通信品質」で調整できます。NetMonster情報を取得できない端末やタイミングでは、従来のAndroid公開API値だけで判定を継続します。
 
 「設定 → データプラン」ではSIMごとに次を設定できます。
 

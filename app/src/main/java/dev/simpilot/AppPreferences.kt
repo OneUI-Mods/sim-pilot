@@ -5,39 +5,41 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 class AppPreferences(context: Context) {
-    private val storageContext = if (context.isDeviceProtectedStorage) {
-        context
-    } else {
-        context.createDeviceProtectedStorageContext().also {
-            it.moveSharedPreferencesFrom(context, PREFS_NAME)
+    private val storageContext =
+        if (context.isDeviceProtectedStorage) {
+            context
+        } else {
+            context.createDeviceProtectedStorageContext().also {
+                it.moveSharedPreferencesFrom(context, PREFS_NAME)
+            }
         }
-    }
     private val prefs = storageContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     fun load(): MonitorConfig {
         val qualityV2 = prefs.getBoolean("quality_v2", false)
         return MonitorConfig(
-        enabled = prefs.getBoolean("enabled", false),
-        followVoice = prefs.getBoolean("follow_voice", false),
-        followSms = prefs.getBoolean("follow_sms", false),
-        wifiRestoreEnabled = prefs.getBoolean("wifi_restore_enabled", false),
-        wifiDataEnabled = prefs.getBoolean("wifi_data_enabled", true),
-        wifiDataSubId = prefs.getInt("wifi_data_sub_id", -1),
-        wifiVoiceEnabled = prefs.getBoolean("wifi_voice_enabled", false),
-        wifiVoiceSubId = prefs.getInt("wifi_voice_sub_id", -1),
-        wifiSmsEnabled = prefs.getBoolean("wifi_sms_enabled", false),
-        wifiSmsSubId = prefs.getInt("wifi_sms_sub_id", -1),
-        intervalSeconds = prefs.getInt("interval", 30),
-        latencyThresholdMs = prefs.getInt("latency", 1200),
-        speedThresholdKbps = if (qualityV2) prefs.getInt("speed", 5_000) else 5_000,
-        weakSignalDbm = prefs.getInt("weak_signal_dbm", -114),
-        consecutiveFailures = prefs.getInt("failures", 3),
-        cooldownMinutes = prefs.getInt("cooldown", 5),
+            enabled = prefs.getBoolean("enabled", false),
+            followVoice = prefs.getBoolean("follow_voice", false),
+            followSms = prefs.getBoolean("follow_sms", false),
+            wifiRestoreEnabled = prefs.getBoolean("wifi_restore_enabled", false),
+            wifiDataEnabled = prefs.getBoolean("wifi_data_enabled", true),
+            wifiDataSubId = prefs.getInt("wifi_data_sub_id", -1),
+            wifiVoiceEnabled = prefs.getBoolean("wifi_voice_enabled", false),
+            wifiVoiceSubId = prefs.getInt("wifi_voice_sub_id", -1),
+            wifiSmsEnabled = prefs.getBoolean("wifi_sms_enabled", false),
+            wifiSmsSubId = prefs.getInt("wifi_sms_sub_id", -1),
+            intervalSeconds = prefs.getInt("interval", 30),
+            latencyThresholdMs = prefs.getInt("latency", 1200),
+            speedThresholdKbps = if (qualityV2) prefs.getInt("speed", 5_000) else 5_000,
+            weakSignalDbm = prefs.getInt("weak_signal_dbm", -114),
+            consecutiveFailures = prefs.getInt("failures", 3),
+            cooldownMinutes = prefs.getInt("cooldown", 5),
         )
     }
 
     fun save(config: MonitorConfig) {
-        prefs.edit()
+        prefs
+            .edit()
             .putBoolean("enabled", config.enabled)
             .putBoolean("follow_voice", config.followVoice)
             .putBoolean("follow_sms", config.followSms)
@@ -74,7 +76,7 @@ class AppPreferences(context: Context) {
                                 capacityBytes = allowance.getLong("capacityBytes"),
                                 startEpochDay = allowance.getLong("startEpochDay"),
                                 endEpochDay = allowance.getLong("endEpochDay"),
-                            )
+                            ),
                         )
                     }
                 }
@@ -82,45 +84,64 @@ class AppPreferences(context: Context) {
                     SimPlanConfig(
                         subId = item.getInt("subId"),
                         enabled = item.optBoolean("enabled", false),
-                        type = runCatching { DataPlanType.valueOf(item.optString("type")) }.getOrDefault(DataPlanType.MONTHLY),
+                        type =
+                            runCatching { DataPlanType.valueOf(item.optString("type")) }
+                                .getOrDefault(DataPlanType.MONTHLY),
                         capacityBytes = item.optLong("capacityBytes", 20L * GB),
                         billingDay = item.optInt("billingDay", 1),
-                        startEpochDay = item.optLong("startEpochDay", java.time.LocalDate.now().toEpochDay()),
-                        endEpochDay = item.optLong("endEpochDay", java.time.LocalDate.now().plusMonths(1).minusDays(1).toEpochDay()),
+                        startEpochDay =
+                            item.optLong("startEpochDay", java.time.LocalDate.now().toEpochDay()),
+                        endEpochDay =
+                            item.optLong(
+                                "endEpochDay",
+                                java.time.LocalDate.now().plusMonths(1).minusDays(1).toEpochDay(),
+                            ),
                         allowances = allowances,
-                        manualRemainingBytes = if (item.has("manualRemainingBytes") && !item.isNull("manualRemainingBytes")) {
-                            item.getLong("manualRemainingBytes")
-                        } else null,
-                    )
+                        manualRemainingBytes =
+                            if (
+                                item.has("manualRemainingBytes") &&
+                                    !item.isNull("manualRemainingBytes")
+                            ) {
+                                item.getLong("manualRemainingBytes")
+                            } else null,
+                    ),
                 )
             }
         }
-    }.getOrDefault(emptyList())
+    }
+        .getOrDefault(emptyList())
 
     fun savePlans(plans: List<SimPlanConfig>) {
         val array = JSONArray()
         plans.forEach { plan ->
-            array.put(JSONObject().apply {
-                put("subId", plan.subId)
-                put("enabled", plan.enabled)
-                put("type", plan.type.name)
-                put("capacityBytes", plan.capacityBytes)
-                put("billingDay", plan.billingDay)
-                put("startEpochDay", plan.startEpochDay)
-                put("endEpochDay", plan.endEpochDay)
-                put("manualRemainingBytes", plan.manualRemainingBytes ?: JSONObject.NULL)
-                put("allowances", JSONArray().apply {
-                    plan.allowances.forEach { allowance ->
-                        put(JSONObject().apply {
-                            put("id", allowance.id)
-                            put("name", allowance.name)
-                            put("capacityBytes", allowance.capacityBytes)
-                            put("startEpochDay", allowance.startEpochDay)
-                            put("endEpochDay", allowance.endEpochDay)
-                        })
-                    }
-                })
-            })
+            array.put(
+                JSONObject().apply {
+                    put("subId", plan.subId)
+                    put("enabled", plan.enabled)
+                    put("type", plan.type.name)
+                    put("capacityBytes", plan.capacityBytes)
+                    put("billingDay", plan.billingDay)
+                    put("startEpochDay", plan.startEpochDay)
+                    put("endEpochDay", plan.endEpochDay)
+                    put("manualRemainingBytes", plan.manualRemainingBytes ?: JSONObject.NULL)
+                    put(
+                        "allowances",
+                        JSONArray().apply {
+                            plan.allowances.forEach { allowance ->
+                                put(
+                                    JSONObject().apply {
+                                        put("id", allowance.id)
+                                        put("name", allowance.name)
+                                        put("capacityBytes", allowance.capacityBytes)
+                                        put("startEpochDay", allowance.startEpochDay)
+                                        put("endEpochDay", allowance.endEpochDay)
+                                    },
+                                )
+                            }
+                        },
+                    )
+                },
+            )
         }
         prefs.edit().putString("data_plans", array.toString()).apply()
     }
@@ -150,7 +171,8 @@ class AppPreferences(context: Context) {
 
     fun setPendingSwitch(role: SimRole, pending: PendingSwitch) {
         val prefix = "audit_pending_${role.name.lowercase()}"
-        prefs.edit()
+        prefs
+            .edit()
             .putInt("${prefix}_target", pending.targetSubId)
             .putString("${prefix}_origin", pending.origin)
             .putLong("${prefix}_at", pending.requestedAt)
@@ -159,18 +181,20 @@ class AppPreferences(context: Context) {
 
     fun clearPendingSwitch(role: SimRole) {
         val prefix = "audit_pending_${role.name.lowercase()}"
-        prefs.edit()
+        prefs
+            .edit()
             .remove("${prefix}_target")
             .remove("${prefix}_origin")
             .remove("${prefix}_at")
             .apply()
     }
 
-    fun claimUnlockCheck(now: Long = System.currentTimeMillis()): Boolean = synchronized(unlockCheckLock) {
-        val last = prefs.getLong("last_unlock_check", 0L)
-        if (now - last in 0 until UNLOCK_DEDUP_MS) return false
-        prefs.edit().putLong("last_unlock_check", now).commit()
-    }
+    fun claimUnlockCheck(now: Long = System.currentTimeMillis()): Boolean =
+        synchronized(unlockCheckLock) {
+            val last = prefs.getLong("last_unlock_check", 0L)
+            if (now - last in 0 until UNLOCK_DEDUP_MS) return false
+            prefs.edit().putLong("last_unlock_check", now).commit()
+        }
 
     companion object {
         private const val PREFS_NAME = "sim_pilot"

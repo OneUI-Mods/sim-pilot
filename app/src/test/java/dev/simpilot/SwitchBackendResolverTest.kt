@@ -33,10 +33,11 @@ class SwitchBackendResolverTest {
 
     @Test
     fun primaryDeviceUsesFallbackOnlyForMissingDynamicRoles() {
-        val result = SwitchBackendResolver.resolve(
-            primaryDevice = true,
-            runtime = mapOf("data" to 31, "voice" to 34),
-        )
+        val result =
+            SwitchBackendResolver.resolve(
+                primaryDevice = true,
+                runtime = mapOf("data" to 31, "voice" to 34),
+            )
 
         assertEquals("samsung_sm_s948q_dynamic_hybrid", result.id)
         assertEquals(mapOf("data" to 31, "voice" to 34, "sms" to 37), result.transactions)

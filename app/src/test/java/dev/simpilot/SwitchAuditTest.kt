@@ -20,7 +20,8 @@ class SwitchAuditTest {
 
     @Test
     fun expiredRequestIsExternal() {
-        val pending = PendingSwitch(targetSubId = 4, origin = "auto_failover", requestedAt = 10_000L)
+        val pending =
+            PendingSwitch(targetSubId = 4, origin = "auto_failover", requestedAt = 10_000L)
 
         assertEquals("external_user_or_system", SwitchAudit.classifyActor(4, pending, 70_001L))
     }

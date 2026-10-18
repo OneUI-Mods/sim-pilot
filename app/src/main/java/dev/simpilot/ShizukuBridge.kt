@@ -8,9 +8,12 @@ import rikka.shizuku.Shizuku
 object ShizukuBridge {
     fun isReady(): Boolean = runCatching { Shizuku.pingBinder() }.getOrDefault(false)
 
-    fun isGranted(): Boolean = isReady() && runCatching {
-        Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
-    }.getOrDefault(false)
+    fun isGranted(): Boolean =
+        isReady() &&
+            runCatching {
+                    Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
+                }
+                .getOrDefault(false)
 
     fun requestPermission(requestCode: Int) {
         Shizuku.requestPermission(requestCode)
@@ -22,10 +25,13 @@ object ShizukuBridge {
         val raw = ShellUserServiceManager.requireService().describeBackend()
         val json = JSONObject(raw)
         val id = json.getString("id")
-        val manufacturer = json.optString("manufacturer", "Android")
-            .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+        val manufacturer =
+            json.optString("manufacturer", "Android").replaceFirstChar {
+                if (it.isLowerCase()) it.titlecase() else it.toString()
+            }
         val transactions = json.getJSONObject("transactions")
-        val roles = SimRole.entries.filterTo(linkedSetOf()) { transactions.has(it.name.lowercase()) }
+        val roles =
+            SimRole.entries.filterTo(linkedSetOf()) { transactions.has(it.name.lowercase()) }
         SwitchBackendInfo(
             id = id,
             label = if (id == "unsupported") "$manufacturer / 未対応" else "$manufacturer / ISub",
@@ -37,10 +43,13 @@ object ShizukuBridge {
     fun setDefault(role: SimRole, subId: Int): Result<Unit> = runCatching {
         check(isReady()) { "Shizukuが起動していません" }
         check(isGranted()) { "Shizuku権限がありません" }
-        val response = ShellUserServiceManager.requireService().setDefault(role.name.lowercase(), subId)
+        val response =
+            ShellUserServiceManager.requireService().setDefault(role.name.lowercase(), subId)
         check(response.startsWith("OK:")) { "${role.label}切替に失敗: ${response.take(160)}" }
         val deadline = SystemClock.elapsedRealtime() + VERIFY_TIMEOUT_MS
-        while (SwitchAudit.currentDefault(role) != subId && SystemClock.elapsedRealtime() < deadline) {
+        while (
+            SwitchAudit.currentDefault(role) != subId && SystemClock.elapsedRealtime() < deadline
+        ) {
             Thread.sleep(VERIFY_INTERVAL_MS)
         }
         check(SwitchAudit.currentDefault(role) == subId) {
@@ -51,7 +60,10 @@ object ShizukuBridge {
     fun mobileUsageBytes(subId: Int, startTime: Long, endTime: Long): Result<Long> = runCatching {
         check(isReady()) { "Shizukuが起動していません" }
         check(isGranted()) { "Shizuku権限がありません" }
-        val json = JSONObject(ShellUserServiceManager.requireService().mobileUsage(subId, startTime, endTime))
+        val json =
+            JSONObject(
+                ShellUserServiceManager.requireService().mobileUsage(subId, startTime, endTime),
+            )
         check(!json.has("error")) { json.optString("error", "通信量を取得できません") }
         json.getLong("totalBytes")
     }

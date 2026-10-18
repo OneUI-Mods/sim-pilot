@@ -1,14 +1,14 @@
 package dev.simpilot
 
-import android.content.Context
 import android.app.usage.NetworkStatsManager
+import android.content.Context
 import android.net.ConnectivityManager
 import android.os.Build
 import android.telephony.TelephonyManager
 import androidx.annotation.Keep
+import java.util.concurrent.TimeUnit
 import org.json.JSONObject
 import rikka.shizuku.SystemServiceHelper
-import java.util.concurrent.TimeUnit
 
 class ShellUserService : IShellService.Stub {
     private var serviceContext: Context? = null
@@ -26,16 +26,18 @@ class ShellUserService : IShellService.Stub {
         require(subId >= -1) { "Invalid subscription" }
         val normalizedRole = role.lowercase()
         val backend = resolution()
-        val transactionCode = backend.transactions[normalizedRole]
-            ?: return "ERROR:unsupported_role:$normalizedRole:${backend.id}"
-        val switchResult = runCommand(
-            "/system/bin/service",
-            "call",
-            "isub",
-            transactionCode.toString(),
-            "i32",
-            subId.toString(),
-        )
+        val transactionCode =
+            backend.transactions[normalizedRole]
+                ?: return "ERROR:unsupported_role:$normalizedRole:${backend.id}"
+        val switchResult =
+            runCommand(
+                "/system/bin/service",
+                "call",
+                "isub",
+                transactionCode.toString(),
+                "i32",
+                subId.toString(),
+            )
         return if (switchResult.startsWith("OK:") && switchResult.contains("Parcel")) {
             "OK:${backend.id}:transaction=$transactionCode"
         } else {
@@ -49,29 +51,45 @@ class ShellUserService : IShellService.Stub {
         val context = checkNotNull(serviceContext) { "UserService context unavailable" }
         val shellContext = runCatching {
             context.createPackageContext("com.android.shell", Context.CONTEXT_IGNORE_SECURITY)
-        }.getOrDefault(context)
+        }
+            .getOrDefault(context)
         val apiBytes = runCatching {
-            val telephony = shellContext.getSystemService(TelephonyManager::class.java)
-                .createForSubscriptionId(subId)
+            val telephony =
+                shellContext
+                    .getSystemService(TelephonyManager::class.java)
+                    .createForSubscriptionId(subId)
             val subscriberId = checkNotNull(telephony.subscriberId)
-            val stats = shellContext.getSystemService(NetworkStatsManager::class.java)
-                .querySummaryForDevice(ConnectivityManager.TYPE_MOBILE, subscriberId, startTime, endTime)
+            val stats =
+                shellContext
+                    .getSystemService(NetworkStatsManager::class.java)
+                    .querySummaryForDevice(
+                        ConnectivityManager.TYPE_MOBILE,
+                        subscriberId,
+                        startTime,
+                        endTime,
+                    )
             stats.rxBytes + stats.txBytes
-        }.getOrNull()
+        }
+            .getOrNull()
         val totalBytes = apiBytes ?: usageFromNetstatsDump(subId, startTime, endTime)
-        JSONObject().apply {
-            put("subId", subId)
-            put("totalBytes", totalBytes)
-            put("startTime", startTime)
-            put("endTime", endTime)
-            put("source", if (apiBytes != null) "network_stats_api" else "netstats_shell")
-        }.toString()
-    }.getOrElse { error ->
-        JSONObject().apply {
-            put("subId", subId)
-            put("error", error.javaClass.simpleName + ": " + error.message.orEmpty())
-        }.toString()
+        JSONObject()
+            .apply {
+                put("subId", subId)
+                put("totalBytes", totalBytes)
+                put("startTime", startTime)
+                put("endTime", endTime)
+                put("source", if (apiBytes != null) "network_stats_api" else "netstats_shell")
+            }
+            .toString()
     }
+        .getOrElse { error ->
+            JSONObject()
+                .apply {
+                    put("subId", subId)
+                    put("error", error.javaClass.simpleName + ": " + error.message.orEmpty())
+                }
+                .toString()
+        }
 
     private fun usageFromNetstatsDump(subId: Int, startTime: Long, endTime: Long): Long {
         val output = runRawCommand("/system/bin/dumpsys", "netstats", "--full")
@@ -82,32 +100,41 @@ class ShellUserService : IShellService.Stub {
         var total = 0L
         output.lineSequence().forEach { line ->
             if (line.startsWith("  ident=")) {
-                matchingIdentity = line.contains("type=0,") && line.contains(target) &&
-                    line.contains("transports={0}") && line.contains(" set=ALL ")
+                matchingIdentity =
+                    line.contains("type=0,") &&
+                        line.contains(target) &&
+                        line.contains("transports={0}") &&
+                        line.contains(" set=ALL ")
                 return@forEach
             }
             if (!matchingIdentity) return@forEach
             val match = NETSTATS_BUCKET.find(line) ?: return@forEach
             val startSeconds = match.groupValues[1].toLongOrNull() ?: return@forEach
             if (startSeconds !in firstBucket until endSeconds) return@forEach
-            total += (match.groupValues[2].toLongOrNull() ?: 0L) +
-                (match.groupValues[3].toLongOrNull() ?: 0L)
+            total +=
+                (match.groupValues[2].toLongOrNull() ?: 0L) +
+                    (match.groupValues[3].toLongOrNull() ?: 0L)
         }
         check(total >= 0) { "Invalid netstats total" }
         return total
     }
 
     private fun resolution(): BackendResolution {
-        val runtime = SwitchBackendResolver.roles.mapNotNull { (role, method) ->
-            dynamicTransaction(method)?.let { role to it }
-        }.toMap()
+        val runtime =
+            SwitchBackendResolver.roles
+                .mapNotNull { (role, method) ->
+                    dynamicTransaction(method)?.let { role to it }
+                }
+                .toMap()
         return SwitchBackendResolver.resolve(isPrimarySamsung(), runtime)
     }
 
     @Suppress("DEPRECATION")
     private fun dynamicTransaction(methodName: String): Int? = runCatching {
         SystemServiceHelper.getTransactionCode(ISUB_STUB, methodName)
-    }.getOrNull()?.takeIf { it > 0 }
+    }
+        .getOrNull()
+        ?.takeIf { it > 0 }
 
     private fun isPrimarySamsung(): Boolean =
         Build.MANUFACTURER.equals("samsung", ignoreCase = true) &&
@@ -124,7 +151,8 @@ class ShellUserService : IShellService.Stub {
         var output = ""
         val reader = Thread {
             output = process.inputStream.bufferedReader().use { it.readText() }.trim()
-        }.apply { start() }
+        }
+            .apply { start() }
         val finished = process.waitFor(20, TimeUnit.SECONDS)
         if (!finished) {
             process.destroyForcibly()
@@ -145,12 +173,13 @@ class ShellUserService : IShellService.Stub {
     }
 }
 
-private fun BackendResolution.toJson(): JSONObject = JSONObject().apply {
-    put("id", id)
-    put("manufacturer", Build.MANUFACTURER)
-    put("model", Build.MODEL)
-    put("sdk", Build.VERSION.SDK_INT)
-    put("primaryDevice", primaryDevice)
-    put("transactions", JSONObject(transactions))
-    put("runtimeTransactions", JSONObject(runtimeTransactions))
-}
+private fun BackendResolution.toJson(): JSONObject =
+    JSONObject().apply {
+        put("id", id)
+        put("manufacturer", Build.MANUFACTURER)
+        put("model", Build.MODEL)
+        put("sdk", Build.VERSION.SDK_INT)
+        put("primaryDevice", primaryDevice)
+        put("transactions", JSONObject(transactions))
+        put("runtimeTransactions", JSONObject(runtimeTransactions))
+    }

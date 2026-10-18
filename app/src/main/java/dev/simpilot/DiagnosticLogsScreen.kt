@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
@@ -41,28 +40,29 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 
 private enum class DiagnosticLogFilter(val label: String) {
     ALL("すべて"),
     RADIO("無線"),
     DECISION("判定"),
     SWITCH("切替"),
-    WARNING("警告"),
-    ;
+    WARNING("警告");
 
-    fun accepts(entry: DiagnosticLogEntry): Boolean = when (this) {
-        ALL -> true
-        RADIO -> entry.event.contains("radio") || entry.event.contains("quality")
-        DECISION -> listOf("decision", "probe", "comparison", "monitor_cycle")
-            .any(entry.event::contains)
-        SWITCH -> listOf("switch", "default", "wifi_restore").any(entry.event::contains)
-        WARNING -> entry.level == "WARN" || entry.level == "ERROR"
-    }
+    fun accepts(entry: DiagnosticLogEntry): Boolean =
+        when (this) {
+            ALL -> true
+            RADIO -> entry.event.contains("radio") || entry.event.contains("quality")
+            DECISION ->
+                listOf("decision", "probe", "comparison", "monitor_cycle")
+                    .any(entry.event::contains)
+            SWITCH -> listOf("switch", "default", "wifi_restore").any(entry.event::contains)
+            WARNING -> entry.level == "WARN" || entry.level == "ERROR"
+        }
 }
 
 @Composable
@@ -82,32 +82,39 @@ internal fun DiagnosticLogsScreen(onBack: () -> Unit, modifier: Modifier = Modif
         }
     }
 
-    val exportLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/zip"),
-    ) { uri ->
-        if (uri != null) {
-            scope.launch {
-                exportStatus = "保存中…"
-                val result = withContext(Dispatchers.IO) { DiagnosticLogAccess.exportZip(context, uri) }
-                exportStatus = result.fold(
-                    onSuccess = { "${it.fileCount}ファイル・${formatLogSize(it.totalBytes)}を保存しました" },
-                    onFailure = { "保存に失敗: ${it.message.orEmpty()}" },
-                )
+    val exportLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.CreateDocument("application/zip"),
+        ) { uri ->
+            if (uri != null) {
+                scope.launch {
+                    exportStatus = "保存中…"
+                    val result =
+                        withContext(Dispatchers.IO) { DiagnosticLogAccess.exportZip(context, uri) }
+                    exportStatus =
+                        result.fold(
+                            onSuccess = {
+                                "${it.fileCount}ファイル・${formatLogSize(it.totalBytes)}を保存しました"
+                            },
+                            onFailure = { "保存に失敗: ${it.message.orEmpty()}" },
+                        )
+                }
             }
         }
-    }
 
     LaunchedEffect(Unit) { refresh() }
     val visibleEntries = snapshot?.entries.orEmpty().filter(filter::accepts)
 
     LazyColumn(
         modifier = modifier,
-        contentPadding = PaddingValues(
-            start = 18.dp,
-            end = 18.dp,
-            top = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding() + 12.dp,
-            bottom = WindowInsets.safeDrawing.asPaddingValues().calculateBottomPadding() + 112.dp,
-        ),
+        contentPadding =
+            PaddingValues(
+                start = 18.dp,
+                end = 18.dp,
+                top = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding() + 12.dp,
+                bottom =
+                    WindowInsets.safeDrawing.asPaddingValues().calculateBottomPadding() + 112.dp,
+            ),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         item { DiagnosticLogHeader(onBack) }
@@ -120,7 +127,8 @@ internal fun DiagnosticLogsScreen(onBack: () -> Unit, modifier: Modifier = Modif
                 onFilter = { filter = it },
                 onRefresh = ::refresh,
                 onExport = {
-                    val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
+                    val timestamp =
+                        LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
                     exportLauncher.launch("SIM-Pilot-logs-$timestamp.zip")
                 },
             )
@@ -160,12 +168,20 @@ private fun DiagnosticLogControls(
     onExport: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        ) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("端末内診断", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Text(
-                    snapshot?.let { "${it.fileCount}ファイル · ${formatLogSize(it.totalBytes)} · 最近${it.entries.size}件を表示" }
-                        ?: if (loading) "読み込み中…" else "ログ情報を取得できません",
+                    "端末内診断",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    snapshot?.let {
+                        "${it.fileCount}ファイル · ${formatLogSize(it.totalBytes)} · 最近${it.entries.size}件を表示"
+                    } ?: if (loading) "読み込み中…" else "ログ情報を取得できません",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
@@ -174,7 +190,11 @@ private fun DiagnosticLogControls(
                     color = MaterialTheme.colorScheme.error,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    FilledTonalButton(onClick = onRefresh, enabled = !loading, modifier = Modifier.weight(1f)) {
+                    FilledTonalButton(
+                        onClick = onRefresh,
+                        enabled = !loading,
+                        modifier = Modifier.weight(1f),
+                    ) {
                         Text(if (loading) "更新中…" else "更新")
                     }
                     Button(
@@ -203,15 +223,24 @@ private fun DiagnosticLogControls(
 @Composable
 private fun DiagnosticLogEntryCard(entry: DiagnosticLogEntry) {
     var expanded by remember(entry.id) { mutableStateOf(false) }
-    val accent = when (entry.level) {
-        "ERROR" -> MaterialTheme.colorScheme.error
-        "WARN" -> MaterialTheme.colorScheme.tertiary
-        else -> MaterialTheme.colorScheme.primary
-    }
-    Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+    val accent =
+        when (entry.level) {
+            "ERROR" -> MaterialTheme.colorScheme.error
+            "WARN" -> MaterialTheme.colorScheme.tertiary
+            else -> MaterialTheme.colorScheme.primary
+        }
+    Surface(
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
         Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(entry.level, color = accent, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+                Text(
+                    entry.level,
+                    color = accent,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.labelMedium,
+                )
                 Spacer(Modifier.width(10.dp))
                 Text(
                     entry.timestamp,
@@ -228,7 +257,11 @@ private fun DiagnosticLogEntryCard(entry: DiagnosticLogEntry) {
             )
             Text(entry.message, style = MaterialTheme.typography.bodyMedium)
             if (entry.summary.isNotBlank()) {
-                Text(entry.summary, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    entry.summary,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             TextButton(onClick = { expanded = !expanded }) {
                 Text(if (expanded) "詳細を閉じる" else "JSON詳細")
@@ -246,8 +279,9 @@ private fun DiagnosticLogEntryCard(entry: DiagnosticLogEntry) {
     }
 }
 
-private fun formatLogSize(bytes: Long): String = when {
-    bytes >= 1024L * 1024L -> "%.1f MB".format(bytes / (1024.0 * 1024.0))
-    bytes >= 1024L -> "%.1f KB".format(bytes / 1024.0)
-    else -> "$bytes B"
-}
+private fun formatLogSize(bytes: Long): String =
+    when {
+        bytes >= 1024L * 1024L -> "%.1f MB".format(bytes / (1024.0 * 1024.0))
+        bytes >= 1024L -> "%.1f KB".format(bytes / 1024.0)
+        else -> "$bytes B"
+    }

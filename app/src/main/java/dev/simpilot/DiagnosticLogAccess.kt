@@ -3,13 +3,13 @@ package dev.simpilot
 import android.content.Context
 import android.net.Uri
 import android.os.Build
-import org.json.JSONObject
 import java.io.File
 import java.io.RandomAccessFile
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import org.json.JSONObject
 
 data class DiagnosticLogEntry(
     val id: String,
@@ -32,7 +32,8 @@ data class DiagnosticExportResult(val fileCount: Int, val totalBytes: Long)
 object DiagnosticLogAccess {
     private const val CURRENT_FILE = "sim-pilot-current.jsonl"
     private const val MAX_RECENT_BYTES = 2 * 1024 * 1024
-    private val allowedName = Regex("sim-pilot-(?:current)\\.jsonl|sim-pilot\\.[1-9][0-9]*\\.jsonl(?:\\.gz)?")
+    private val allowedName =
+        Regex("sim-pilot-(?:current)\\.jsonl|sim-pilot\\.[1-9][0-9]*\\.jsonl(?:\\.gz)?")
 
     fun load(context: Context, maxEntries: Int = 160): DiagnosticLogSnapshot {
         val files = files(context)
@@ -51,18 +52,25 @@ object DiagnosticLogAccess {
                 zip.write(
                     buildString {
                         appendLine("SIM Pilot diagnostics")
-                        appendLine("Exported: ${OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)}")
+                        appendLine(
+                            "Exported: ${OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)}",
+                        )
                         appendLine("App: ${BuildConfig.VERSION_NAME}")
                         appendLine("Device: ${Build.MANUFACTURER} ${Build.MODEL}")
                         appendLine("Android: ${Build.VERSION.RELEASE}")
                         appendLine("Files: ${files.size}")
-                        appendLine("Cell identity fields may reveal an approximate location. Handle this archive carefully.")
-                    }.toByteArray(),
+                        appendLine(
+                            "Cell identity fields may reveal an approximate location. Handle this archive carefully.",
+                        )
+                    }
+                        .toByteArray(),
                 )
                 zip.closeEntry()
                 files.forEach { file ->
                     zip.putNextEntry(ZipEntry("SIM-Pilot-diagnostics/${file.name}"))
-                    file.inputStream().buffered().use { input -> exportedBytes += input.copyTo(zip) }
+                    file.inputStream().buffered().use { input ->
+                        exportedBytes += input.copyTo(zip)
+                    }
                     zip.closeEntry()
                 }
             }
@@ -70,11 +78,14 @@ object DiagnosticLogAccess {
         DiagnosticExportResult(files.size, exportedBytes)
     }
 
-    fun files(context: Context): List<File> = DiagnosticLog.directory(context)
-        .listFiles()
-        .orEmpty()
-        .filter { it.isFile && allowedName.matches(it.name) }
-        .sortedWith(compareBy<File> { if (it.name == CURRENT_FILE) 0 else 1 }.thenBy { it.name })
+    fun files(context: Context): List<File> =
+        DiagnosticLog.directory(context)
+            .listFiles()
+            .orEmpty()
+            .filter { it.isFile && allowedName.matches(it.name) }
+            .sortedWith(
+                compareBy<File> { if (it.name == CURRENT_FILE) 0 else 1 }.thenBy { it.name },
+            )
 
     fun file(context: Context, name: String): File? {
         if (!allowedName.matches(name)) return null
@@ -82,14 +93,16 @@ object DiagnosticLogAccess {
     }
 
     private fun readRecent(file: File, maxEntries: Int): List<DiagnosticLogEntry> {
-        val text = RandomAccessFile(file, "r").use { input ->
-            val start = (input.length() - MAX_RECENT_BYTES).coerceAtLeast(0)
-            input.seek(start)
-            if (start > 0) input.readLine()
-            val remaining = (input.length() - input.filePointer).toInt().coerceAtLeast(0)
-            ByteArray(remaining).also(input::readFully).toString(Charsets.UTF_8)
-        }
-        return text.lineSequence()
+        val text =
+            RandomAccessFile(file, "r").use { input ->
+                val start = (input.length() - MAX_RECENT_BYTES).coerceAtLeast(0)
+                input.seek(start)
+                if (start > 0) input.readLine()
+                val remaining = (input.length() - input.filePointer).toInt().coerceAtLeast(0)
+                ByteArray(remaining).also(input::readFully).toString(Charsets.UTF_8)
+            }
+        return text
+            .lineSequence()
             .filter(String::isNotBlank)
             .mapNotNull(::parseEntry)
             .toList()
@@ -111,7 +124,8 @@ object DiagnosticLogAccess {
             summary = summary(fields),
             raw = raw,
         )
-    }.getOrNull()
+    }
+        .getOrNull()
 
     private fun summary(fields: JSONObject): String {
         val radio = fields.optJSONObject("radioDetails")
@@ -119,9 +133,20 @@ object DiagnosticLogAccess {
             addValue("SIM", fields.value("name"))
             addValue("subId", fields.value("subId"))
             addValue("方式", radio?.value("technology") ?: fields.value("radioTechnology"))
-            addValue("dBm", radio?.value("referenceDbm") ?: fields.value("dbm") ?: fields.value("radioReferenceDbm"))
-            addValue("RSRQ", radio?.value("rsrqDb") ?: fields.value("rsrqDb") ?: fields.value("radioRsrqDb"))
-            addValue("SINR", radio?.value("sinrDb") ?: fields.value("sinrDb") ?: fields.value("radioSinrDb"))
+            addValue(
+                "dBm",
+                radio?.value("referenceDbm")
+                    ?: fields.value("dbm")
+                    ?: fields.value("radioReferenceDbm"),
+            )
+            addValue(
+                "RSRQ",
+                radio?.value("rsrqDb") ?: fields.value("rsrqDb") ?: fields.value("radioRsrqDb"),
+            )
+            addValue(
+                "SINR",
+                radio?.value("sinrDb") ?: fields.value("sinrDb") ?: fields.value("radioSinrDb"),
+            )
             addValue("CQI", radio?.value("cqi") ?: fields.value("radioCqi"))
             addValue("帯域kHz", radio?.value("bandwidthKhz") ?: fields.value("radioBandwidthKhz"))
             addValue("セル", radio?.optJSONArray("cells")?.length())
@@ -134,7 +159,8 @@ object DiagnosticLogAccess {
         return parts.joinToString(" · ")
     }
 
-    private fun JSONObject.value(key: String): Any? = if (has(key) && !isNull(key)) get(key) else null
+    private fun JSONObject.value(key: String): Any? =
+        if (has(key) && !isNull(key)) get(key) else null
 
     private fun MutableList<String>.addValue(label: String, value: Any?) {
         if (value != null && value.toString().isNotBlank()) add("$label $value")

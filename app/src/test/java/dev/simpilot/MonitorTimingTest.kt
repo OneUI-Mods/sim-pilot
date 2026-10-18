@@ -44,8 +44,38 @@ class MonitorTimingTest {
 
     @Test
     fun burstCallbacksDoNotCountAsMultipleBadSamples() {
-        assertTrue(MonitorTiming.shouldAcceptBadSample(currentCount = 0, lastAcceptedAt = 0, now = 10_000))
-        assertFalse(MonitorTiming.shouldAcceptBadSample(currentCount = 1, lastAcceptedAt = 10_000, now = 10_250))
-        assertTrue(MonitorTiming.shouldAcceptBadSample(currentCount = 1, lastAcceptedAt = 10_000, now = 12_500))
+        assertTrue(
+            MonitorTiming.shouldAcceptBadSample(currentCount = 0, lastAcceptedAt = 0, now = 10_000),
+        )
+        assertFalse(
+            MonitorTiming.shouldAcceptBadSample(
+                currentCount = 1,
+                lastAcceptedAt = 10_000,
+                now = 10_250,
+            ),
+        )
+        assertTrue(
+            MonitorTiming.shouldAcceptBadSample(
+                currentCount = 1,
+                lastAcceptedAt = 10_000,
+                now = 12_500,
+            ),
+        )
+    }
+
+    @Test
+    fun freshWakeContextIsUsedOnceButStaleWakeContextIsIgnored() {
+        assertEquals(
+            10_000L,
+            MonitorTiming.freshWakeStartedAt(wakeStartedAt = 10_000, cycleStartedAt = 10_025),
+        )
+        assertEquals(
+            null,
+            MonitorTiming.freshWakeStartedAt(wakeStartedAt = 10_000, cycleStartedAt = 40_001),
+        )
+        assertEquals(
+            null,
+            MonitorTiming.freshWakeStartedAt(wakeStartedAt = 10_001, cycleStartedAt = 10_000),
+        )
     }
 }

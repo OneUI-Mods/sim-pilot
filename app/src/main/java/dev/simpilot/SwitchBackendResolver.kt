@@ -8,17 +8,19 @@ internal data class BackendResolution(
 )
 
 internal object SwitchBackendResolver {
-    val roles = mapOf(
-        "data" to "setDefaultDataSubId",
-        "voice" to "setDefaultVoiceSubId",
-        "sms" to "setDefaultSmsSubId",
-    )
+    val roles =
+        mapOf(
+            "data" to "setDefaultDataSubId",
+            "voice" to "setDefaultVoiceSubId",
+            "sms" to "setDefaultSmsSubId",
+        )
 
-    private val primaryFallback = mapOf(
-        "data" to 31,
-        "voice" to 34,
-        "sms" to 37,
-    )
+    private val primaryFallback =
+        mapOf(
+            "data" to 31,
+            "voice" to 34,
+            "sms" to 37,
+        )
 
     fun resolve(primaryDevice: Boolean, runtime: Map<String, Int>): BackendResolution {
         if (!primaryDevice) {
@@ -29,24 +31,27 @@ internal object SwitchBackendResolver {
             }
         }
         return when {
-            runtime.size == roles.size -> BackendResolution(
-                "samsung_sm_s948q_dynamic_verified",
-                runtime,
-                runtime,
-                true,
-            )
-            runtime.isNotEmpty() -> BackendResolution(
-                "samsung_sm_s948q_dynamic_hybrid",
-                primaryFallback + runtime,
-                runtime,
-                true,
-            )
-            else -> BackendResolution(
-                "samsung_sm_s948q_oneui85_fallback",
-                primaryFallback,
-                emptyMap(),
-                true,
-            )
+            runtime.size == roles.size ->
+                BackendResolution(
+                    "samsung_sm_s948q_dynamic_verified",
+                    runtime,
+                    runtime,
+                    true,
+                )
+            runtime.isNotEmpty() ->
+                BackendResolution(
+                    "samsung_sm_s948q_dynamic_hybrid",
+                    primaryFallback + runtime,
+                    runtime,
+                    true,
+                )
+            else ->
+                BackendResolution(
+                    "samsung_sm_s948q_oneui85_fallback",
+                    primaryFallback,
+                    emptyMap(),
+                    true,
+                )
         }
     }
 }

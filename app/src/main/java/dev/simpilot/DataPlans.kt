@@ -50,38 +50,51 @@ object DataPlanPolicy {
     fun window(plan: SimPlanConfig, today: LocalDate = LocalDate.now()): DataPlanWindow? {
         if (!plan.enabled) return null
         val zone = ZoneId.systemDefault()
-        val (start, endExclusive, capacity) = when (plan.type) {
-            DataPlanType.MONTHLY -> {
-                val currentMonth = YearMonth.from(today)
-                val thisStart = currentMonth.atDay(plan.billingDay.coerceIn(1, currentMonth.lengthOfMonth()))
-                val startDate = if (today < thisStart) {
-                    val previous = currentMonth.minusMonths(1)
-                    previous.atDay(plan.billingDay.coerceIn(1, previous.lengthOfMonth()))
-                } else thisStart
-                val next = YearMonth.from(startDate).plusMonths(1)
-                    .atDay(plan.billingDay.coerceIn(1, YearMonth.from(startDate).plusMonths(1).lengthOfMonth()))
-                Triple(startDate, next, plan.capacityBytes)
-            }
-            DataPlanType.FIXED -> {
-                if (today.toEpochDay() !in plan.startEpochDay..plan.endEpochDay) return null
-                Triple(
-                    LocalDate.ofEpochDay(plan.startEpochDay),
-                    LocalDate.ofEpochDay(plan.endEpochDay).plusDays(1),
-                    plan.capacityBytes,
-                )
-            }
-            DataPlanType.FLEXIBLE -> {
-                val active = plan.allowances.filter {
-                    today.toEpochDay() in it.startEpochDay..it.endEpochDay
+        val (start, endExclusive, capacity) =
+            when (plan.type) {
+                DataPlanType.MONTHLY -> {
+                    val currentMonth = YearMonth.from(today)
+                    val thisStart =
+                        currentMonth.atDay(
+                            plan.billingDay.coerceIn(1, currentMonth.lengthOfMonth()),
+                        )
+                    val startDate =
+                        if (today < thisStart) {
+                            val previous = currentMonth.minusMonths(1)
+                            previous.atDay(plan.billingDay.coerceIn(1, previous.lengthOfMonth()))
+                        } else thisStart
+                    val next =
+                        YearMonth.from(startDate)
+                            .plusMonths(1)
+                            .atDay(
+                                plan.billingDay.coerceIn(
+                                    1,
+                                    YearMonth.from(startDate).plusMonths(1).lengthOfMonth(),
+                                ),
+                            )
+                    Triple(startDate, next, plan.capacityBytes)
                 }
-                if (active.isEmpty()) return null
-                Triple(
-                    LocalDate.ofEpochDay(active.minOf { it.startEpochDay }),
-                    LocalDate.ofEpochDay(active.maxOf { it.endEpochDay }).plusDays(1),
-                    active.sumOf { it.capacityBytes },
-                )
+                DataPlanType.FIXED -> {
+                    if (today.toEpochDay() !in plan.startEpochDay..plan.endEpochDay) return null
+                    Triple(
+                        LocalDate.ofEpochDay(plan.startEpochDay),
+                        LocalDate.ofEpochDay(plan.endEpochDay).plusDays(1),
+                        plan.capacityBytes,
+                    )
+                }
+                DataPlanType.FLEXIBLE -> {
+                    val active =
+                        plan.allowances.filter {
+                            today.toEpochDay() in it.startEpochDay..it.endEpochDay
+                        }
+                    if (active.isEmpty()) return null
+                    Triple(
+                        LocalDate.ofEpochDay(active.minOf { it.startEpochDay }),
+                        LocalDate.ofEpochDay(active.maxOf { it.endEpochDay }).plusDays(1),
+                        active.sumOf { it.capacityBytes },
+                    )
+                }
             }
-        }
         if (capacity <= 0 || !endExclusive.isAfter(start)) return null
         return DataPlanWindow(
             start.atStartOfDay(zone).toInstant().toEpochMilli(),
@@ -93,16 +106,18 @@ object DataPlanPolicy {
     fun state(plan: SimPlanConfig, measuredBytes: Long?): DataUsageState? {
         val window = window(plan) ?: return null
         val manual = plan.manualRemainingBytes
-        val used = when {
-            manual != null -> (window.capacityBytes - manual).coerceIn(0, window.capacityBytes)
-            measuredBytes != null -> measuredBytes.coerceAtLeast(0)
-            else -> 0
-        }
-        val remaining = when {
-            manual != null -> manual.coerceIn(0, window.capacityBytes)
-            measuredBytes != null -> (window.capacityBytes - measuredBytes).coerceAtLeast(0)
-            else -> window.capacityBytes
-        }
+        val used =
+            when {
+                manual != null -> (window.capacityBytes - manual).coerceIn(0, window.capacityBytes)
+                measuredBytes != null -> measuredBytes.coerceAtLeast(0)
+                else -> 0
+            }
+        val remaining =
+            when {
+                manual != null -> manual.coerceIn(0, window.capacityBytes)
+                measuredBytes != null -> (window.capacityBytes - measuredBytes).coerceAtLeast(0)
+                else -> window.capacityBytes
+            }
         return DataUsageState(
             usedBytes = used,
             capacityBytes = window.capacityBytes,
@@ -120,8 +135,8 @@ object DataPlanPolicy {
         return ratioGain >= 0.15 && byteGain >= 500L * MB
     }
 
-    fun epochMillisToDay(epochMillis: Long): Long = Instant.ofEpochMilli(epochMillis)
-        .atZone(ZoneId.systemDefault()).toLocalDate().toEpochDay()
+    fun epochMillisToDay(epochMillis: Long): Long =
+        Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault()).toLocalDate().toEpochDay()
 }
 
 const val MB = 1_000_000L

@@ -1,5 +1,6 @@
 plugins {
     id("com.android.application")
+    id("com.diffplug.spotless")
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
@@ -11,8 +12,8 @@ android {
         applicationId = "dev.simpilot"
         minSdk = 31
         targetSdk = 37
-        versionCode = 18
-        versionName = "1.9.0"
+        versionCode = 19
+        versionName = "1.10.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -50,6 +51,21 @@ android {
     }
 }
 
+spotless {
+    kotlin {
+        target("src/**/*.kt")
+        ktfmt("0.65").kotlinlangStyle()
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+    kotlinGradle {
+        target("*.gradle.kts")
+        ktfmt("0.65").kotlinlangStyle()
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+}
+
 dependencies {
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.10.0")
@@ -70,15 +86,16 @@ dependencies {
 val verifyLicenseInventory by tasks.registering {
     group = "verification"
     description = "Verifies that application and runtime dependency license records are packaged."
-    val requiredFiles = listOf(
-        rootProject.file("LICENSE"),
-        rootProject.file("NOTICE"),
-        rootProject.file("THIRD_PARTY_NOTICES.md"),
-        rootProject.file("licenses/registry.json"),
-        project.file("src/main/assets/licenses/SIM-Pilot-LICENSE.txt"),
-        project.file("src/main/assets/licenses/netmonster-core-LICENSE.txt"),
-        project.file("src/main/assets/licenses/shizuku-LICENSE.txt"),
-    )
+    val requiredFiles =
+        listOf(
+            rootProject.file("LICENSE"),
+            rootProject.file("NOTICE"),
+            rootProject.file("THIRD_PARTY_NOTICES.md"),
+            rootProject.file("licenses/registry.json"),
+            project.file("src/main/assets/licenses/SIM-Pilot-LICENSE.txt"),
+            project.file("src/main/assets/licenses/netmonster-core-LICENSE.txt"),
+            project.file("src/main/assets/licenses/shizuku-LICENSE.txt"),
+        )
     inputs.files(requiredFiles)
     doLast {
         requiredFiles.forEach { licenseFile ->
@@ -86,9 +103,21 @@ val verifyLicenseInventory by tasks.registering {
                 "Required license record is missing: ${licenseFile.relativeTo(rootProject.projectDir)}"
             }
         }
-        check(project.file("src/main/assets/licenses/netmonster-core-LICENSE.txt").readText().contains("Apache License"))
-        check(project.file("src/main/assets/licenses/shizuku-LICENSE.txt").readText().contains("MIT License"))
+        check(
+            project
+                .file("src/main/assets/licenses/netmonster-core-LICENSE.txt")
+                .readText()
+                .contains("Apache License"),
+        )
+        check(
+            project
+                .file("src/main/assets/licenses/shizuku-LICENSE.txt")
+                .readText()
+                .contains("MIT License"),
+        )
     }
 }
 
-tasks.named("preBuild").configure { dependsOn(verifyLicenseInventory) }
+tasks.named("preBuild").configure {
+    dependsOn("spotlessCheck", verifyLicenseInventory)
+}

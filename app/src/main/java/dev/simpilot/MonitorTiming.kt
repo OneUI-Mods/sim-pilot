@@ -5,6 +5,7 @@ internal object MonitorTiming {
     private const val MIN_BAD_SAMPLE_GAP_MS = 2_500L
     private const val QUOTA_COMPARISON_SETTLE_MS = 7_000L
     private const val QUALITY_RECOVERY_SETTLE_MS = 30_000L
+    private const val WAKE_CONTEXT_MAX_AGE_MS = 30_000L
 
     fun shouldReplace(existingDeadline: Long, candidateDeadline: Long): Boolean =
         candidateDeadline < existingDeadline
@@ -16,7 +17,8 @@ internal object MonitorTiming {
         requiredBadSamples: Int,
     ): Long {
         val degraded = enabled && badSamples > 0
-        return if (degraded) minOf(configuredIntervalMs, DEGRADED_RECHECK_MS) else configuredIntervalMs
+        return if (degraded) minOf(configuredIntervalMs, DEGRADED_RECHECK_MS)
+        else configuredIntervalMs
     }
 
     fun comparisonSettleTimeoutMs(qualityRecovery: Boolean): Long =
@@ -24,4 +26,10 @@ internal object MonitorTiming {
 
     fun shouldAcceptBadSample(currentCount: Int, lastAcceptedAt: Long, now: Long): Boolean =
         currentCount == 0 || now - lastAcceptedAt >= MIN_BAD_SAMPLE_GAP_MS
+
+    fun freshWakeStartedAt(wakeStartedAt: Long?, cycleStartedAt: Long): Long? {
+        val startedAt = wakeStartedAt ?: return null
+        val age = cycleStartedAt - startedAt
+        return startedAt.takeIf { age in 0..WAKE_CONTEXT_MAX_AGE_MS }
+    }
 }
