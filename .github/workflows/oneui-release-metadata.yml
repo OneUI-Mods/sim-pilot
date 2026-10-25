@@ -1,0 +1,20 @@
+name: Publish manager release metadata
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published release tag
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  metadata:
+    uses: OneUI-Mods/OneUIModsManager/.github/workflows/release-metadata.yml@9c9d6e267a8f21974010b60881cb140140662982
+    with:
+      tag: ${{ github.event.release.tag_name || inputs.tag }}
