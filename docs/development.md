@@ -19,3 +19,7 @@ Android SDKのコンパイル対象は37です。JDK・Gradle・依存関係の�
 ## ドキュメント一覧
 
 - [実装と過去の検証の補足](architecture-and-validation.md)
+
+## CPU・メモリ効率
+
+[変更内容と検証範囲](efficiency.md)を参照してください。

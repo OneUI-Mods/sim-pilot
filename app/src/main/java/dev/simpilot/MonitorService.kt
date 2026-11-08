@@ -44,7 +44,7 @@ import rikka.shizuku.Shizuku
 
 class MonitorService : Service() {
     private val worker = Executors.newSingleThreadExecutor()
-    private val usageWorker = Executors.newSingleThreadExecutor()
+    private val usageWorker = BackgroundExecutors.serial("SimPilotUsage")
     private val radioWorker = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
     private lateinit var prefs: AppPreferences

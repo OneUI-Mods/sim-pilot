@@ -7,3 +7,8 @@ local.properties
 captures/
 screenshot-*.png
 .DS_Store
+
+# Private distribution signing and generated release files
+.signing/
+dist/
+__pycache__/
