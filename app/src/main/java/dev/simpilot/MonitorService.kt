@@ -92,17 +92,25 @@ class MonitorService : Service() {
         scheduledAtElapsed = Long.MAX_VALUE
         if (!stopped.get()) enqueueCycle(forceDeepProbe = false)
     }
+    private val defaultCapabilityEvents = NetworkCapabilityEvents()
+    private val cellularCapabilityEvents = NetworkCapabilityEvents()
     private val networkCallback =
         object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) =
                 requestRealtimeCheck("network_available", 250)
 
-            override fun onLost(network: Network) = requestRealtimeCheck("network_lost", 250)
+            override fun onLost(network: Network) {
+                defaultCapabilityEvents.lost(network)
+                requestRealtimeCheck("network_lost", 250)
+            }
 
             override fun onCapabilitiesChanged(
                 network: Network,
                 networkCapabilities: NetworkCapabilities,
-            ) = requestRealtimeCheck("network_capabilities", 250)
+            ) {
+                if (defaultCapabilityEvents.changed(network, networkCapabilities))
+                    requestRealtimeCheck("network_capabilities", 250)
+            }
         }
     private val cellularNetworkCallback =
         object : ConnectivityManager.NetworkCallback() {
@@ -113,6 +121,7 @@ class MonitorService : Service() {
 
             override fun onLost(network: Network) {
                 cellularNetworks -= network
+                cellularCapabilityEvents.lost(network)
                 requestRealtimeCheck("cellular_network_lost", 250)
             }
 
@@ -121,7 +130,8 @@ class MonitorService : Service() {
                 networkCapabilities: NetworkCapabilities,
             ) {
                 cellularNetworks += network
-                requestRealtimeCheck("cellular_network_capabilities", 250)
+                if (cellularCapabilityEvents.changed(network, networkCapabilities))
+                    requestRealtimeCheck("cellular_network_capabilities", 250)
             }
         }
     private val subscriptionsChangedListener =

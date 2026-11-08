@@ -23,3 +23,7 @@ Android SDKのコンパイル対象は37です。JDK・Gradle・依存関係の�
 ## CPU・メモリ効率
 
 [変更内容と検証範囲](efficiency.md)を参照してください。
+
+## 待機処理の省電力化
+
+[変更点と検証方針](battery-efficiency.md)を参照してください。
