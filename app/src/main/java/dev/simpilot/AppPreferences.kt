@@ -15,6 +15,12 @@ class AppPreferences(context: Context) {
         }
     private val prefs = storageContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
+    var startOnBoot: Boolean
+        get() = prefs.getBoolean("start_on_boot", true)
+        set(value) {
+            prefs.edit().putBoolean("start_on_boot", value).apply()
+        }
+
     fun load(): MonitorConfig {
         val qualityV2 = prefs.getBoolean("quality_v2", false)
         return MonitorConfig(

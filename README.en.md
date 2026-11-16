@@ -4,6 +4,10 @@
 
 Manage default SIMs for data, calls, and messages separately on a dual-SIM device. Compare signal and connection quality to switch the data SIM automatically.
 
+## Automatic startup after boot
+
+Automatic startup after device boot can be switched on or off in settings. The default is on when no choice has been saved; an existing off choice is preserved. Startup only restores configured behavior and does not override feature switches, permissions, or lock-state restrictions. The switch is in Settings. Opening the app can still resume configured monitoring and Wi-Fi restoration.
+
 ## Features
 
 - Manual switching and automatic switching when connectivity degrades.

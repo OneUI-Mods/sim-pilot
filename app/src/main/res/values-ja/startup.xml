@@ -1,0 +1,4 @@
+<resources>
+<string name="start_on_boot">端末起動時に自動起動</string>
+<string name="start_on_boot_detail">選択済みの監視・Wi-Fi復帰機能を端末起動後に再開します。OFFでもアプリを開くと再開できます。</string>
+</resources>

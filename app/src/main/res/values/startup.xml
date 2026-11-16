@@ -1,0 +1,4 @@
+<resources>
+<string name="start_on_boot">Start automatically after device boot</string>
+<string name="start_on_boot_detail">Resume enabled monitoring and Wi-Fi restore features after boot. You can still start them by opening the app.</string>
+</resources>

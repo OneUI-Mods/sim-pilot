@@ -99,6 +99,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -1258,6 +1259,7 @@ private fun SettingsPageScreen(
 ) {
     val context = LocalContext.current
     var page by remember { mutableStateOf(SettingsPage.HOME) }
+    var startOnBoot by remember { mutableStateOf(AppPreferences(context).startOnBoot) }
     var backProgress by remember { mutableStateOf(0f) }
     var backDirection by remember { mutableStateOf(1f) }
     PredictiveBackHandler(enabled = page != SettingsPage.HOME) { events ->
@@ -1314,6 +1316,18 @@ private fun SettingsPageScreen(
                                 style = MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.Bold,
                             )
+                        }
+                        item {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                FollowSwitch(stringResource(R.string.start_on_boot), startOnBoot) {
+                                    startOnBoot = it
+                                    AppPreferences(context).startOnBoot = it
+                                }
+                                Text(
+                                    stringResource(R.string.start_on_boot_detail),
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
                         }
                         item {
                             SettingsCategory(Icons.Rounded.CellTower, "通信品質", "電波・速度・遅延・切替感度") {

@@ -19,6 +19,7 @@ class BootReceiver : BroadcastReceiver() {
             return
 
         val preferences = AppPreferences(context)
+        if (action != Intent.ACTION_MY_PACKAGE_REPLACED && !preferences.startOnBoot) return
         val config = preferences.load()
         val unlocked = context.getSystemService(UserManager::class.java).isUserUnlocked
         val forceCheck =
