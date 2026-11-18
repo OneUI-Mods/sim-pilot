@@ -27,3 +27,5 @@ Android SDKのコンパイル対象は37です。JDK・Gradle・依存関係の�
 ## 待機処理の省電力化
 
 [変更点と検証方針](battery-efficiency.md)を参照してください。
+
+[Build environment / ビルド環境](build-environment.md)

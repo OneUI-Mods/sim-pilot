@@ -47,3 +47,5 @@ Android 12以降の対応するDSDV端末とShizuku / Shizuku Plusが必要で�
 SIM Pilot本体は[LICENSE](LICENSE)に記載のAll rights reservedです。publicであることは再配布の許諾を意味しません。第三者コンポーネントは[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)を参照してください。
 
 [OneUI Modsのアプリ一覧](https://github.com/OneUI-Mods)
+
+[Build environment / ビルド環境](docs/build-environment.md)

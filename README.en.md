@@ -47,3 +47,5 @@ Build instructions, architecture, and verification are in the [developer guide (
 SIM Pilot is **All rights reserved**, as stated in [LICENSE](LICENSE). A public repository does not grant redistribution permission. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for third-party components.
 
 [OneUI Mods app catalog](https://github.com/OneUI-Mods)
+
+[Build environment / ビルド環境](docs/build-environment.md)
