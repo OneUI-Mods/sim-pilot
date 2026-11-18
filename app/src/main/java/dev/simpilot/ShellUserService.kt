@@ -6,7 +6,6 @@ import android.net.ConnectivityManager
 import android.os.Build
 import android.telephony.TelephonyManager
 import androidx.annotation.Keep
-import java.util.concurrent.TimeUnit
 import org.json.JSONObject
 import rikka.shizuku.SystemServiceHelper
 
@@ -148,19 +147,9 @@ class ShellUserService : IShellService.Stub {
 
     private fun runRawCommand(vararg command: String): String {
         val process = ProcessBuilder(*command).redirectErrorStream(true).start()
-        var output = ""
-        val reader = Thread {
-            output = process.inputStream.bufferedReader().use { it.readText() }.trim()
-        }
-            .apply { start() }
-        val finished = process.waitFor(20, TimeUnit.SECONDS)
-        if (!finished) {
-            process.destroyForcibly()
-            error("Command timeout")
-        }
-        reader.join(2_000)
-        check(process.exitValue() == 0) { "Command failed: ${process.exitValue()}" }
-        return output
+        val response = CommandOutput.collect(process, 20_000, 8_388_608)
+        check(response.code == 0) { "Command failed: ${response.code}" }
+        return response.text.trim()
     }
 
     override fun destroy() {
