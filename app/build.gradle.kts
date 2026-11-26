@@ -12,10 +12,10 @@ android {
 
     defaultConfig {
         applicationId = "dev.simpilot"
-        minSdk = 31
+        minSdk = 37
         targetSdk = 37
-        versionCode = 23
-        versionName = "1.10.4"
+        versionCode = 24
+        versionName = "1.10.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

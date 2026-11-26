@@ -1,5 +1,7 @@
 # SIM Pilot
 
+インストールにはAndroid 17（API 37）以降が必要です。
+
 [日本語](README.md) · [English](README.en.md)
 
 デュアルSIM端末で、データ・通話・メッセージの既定SIMを別々に管理するアプリです。電波と通信品質を比較してデータSIMを自動切り替えできます。
@@ -20,7 +22,7 @@
 
 ## 対応環境・初期設定
 
-Android 12以降の対応するDSDV端末とShizuku / Shizuku Plusが必要です。主な実機確認環境はGalaxy S26 Ultra（SM-S948Q）、Android 16 / One UI 8.5です。他のOS・端末では、端末の切り替え方法を検出できた機能だけを有効にします。SDK 37向けのビルドであることと、Android 17で全機能を確認済みであることは同じではありません。
+Android 17以降の対応するDSDV端末とShizuku / Shizuku Plusが必要です。従来版の主な実機確認環境はGalaxy S26 Ultra（SM-S948Q）のAndroid 16 / One UI 8.5です。他のOS・端末では、端末の切り替え方法を検出できた機能だけを有効にします。SDK 37向けのビルドであることと、Android 17で全機能を確認済みであることは同じではありません。
 
 1. [Releases](https://github.com/OneUI-Mods/sim-pilot/releases)から配布APKをインストールします。
 2. Shizukuを起動してSIM Pilotへのアクセスを許可します。
